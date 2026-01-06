@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixel Dog – Web Pet</title>
+    <style>
+        :root {
+            --bg: #222;
+            --wall: #2a2a2f;
+            --floor: #1e1e22;
+            --accent: #6ac2ff;
+            --plant: #59a36f;
+            --ball: #ffb84d;
+            --bowl: #c84d4d;
+            --white: #fff;
+            --shadow: rgba(0, 0, 0, 0.25);
+            --pixel: 8px;
+            /* base pixel size */
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: #ddd;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 10px 0 6px;
+        }
+
+        .app {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 12px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .toolbar button {
+            background: #333;
+            color: #eee;
+            border: 1px solid #444;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .toolbar button:hover {
+            background: #3a3a3a;
+        }
+
+        .status {
+            font-size: 13px;
+            opacity: 0.85;
+            margin-bottom: 10px;
+        }
+
+        /* Room */
+        .room {
+            position: relative;
+            width: 100%;
+            height: 520px;
+            border-radius: 12px;
+            overflow: hidden;
+            background:
+                linear-gradient(0deg, var(--floor) 35%, var(--wall) 35%);
+            box-shadow: 0 6px 20px var(--shadow);
+        }
+
+        /* Rug */
+        .rug {
+            position: absolute;
+            left: 50%;
+            bottom: 12%;
+            width: 420px;
+            height: 140px;
+            transform: translateX(-50%);
+            background: repeating-linear-gradient(90deg, #3a3a57 0, #3a3a57 12px, #30304a 12px, #30304a 24px);
+            border-radius: 20px;
+            box-shadow: 0 2px 10px var(--shadow) inset, 0 10px 30px var(--shadow);
+        }
+
+        /* Bowl */
+        .bowl {
+            position: absolute;
+            left: 20%;
+            bottom: 16%;
+            width: 64px;
+            height: 28px;
+            background: var(--bowl);
+            border-radius: 14px 14px 10px 10px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .bowl::after {
+            content: "";
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            bottom: 6px;
+            height: 6px;
+            background: #9f3737;
+            border-radius: 6px;
+        }
+
+        .bowl.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Ball */
+        .ball {
+            position: absolute;
+            right: 18%;
+            bottom: 20%;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--ball);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .ball.roll {
+            animation: roll 1.6s ease-in-out;
+        }
+
+        @keyframes roll {
+            0% {
+                transform: translateX(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateX(-140px) rotate(-220deg);
+            }
+
+            100% {
+                transform: translateX(-240px) rotate(-360deg);
+            }
+        }
+
+        /* Plant */
+        .plant {
+            position: absolute;
+            left: 8%;
+            bottom: 18%;
+            width: 22px;
+            height: 80px;
+            background: #5b4b41;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .plant::before,
+        .plant::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            bottom: 68px;
+            border-radius: 50%;
+        }
+
+        .plant::before {
+            background: radial-gradient(var(--plant), #3c744e);
+            filter: saturate(1.15);
+        }
+
+        .plant::after {
+            background: radial-gradient(transparent 60%, rgba(0, 0, 0, 0.1));
+        }
+
+        /* Dog container */
+        .dog-wrap {
+            position: absolute;
+            left: 50%;
+            bottom: 16%;
+            transform: translateX(-50%);
+            width: 180px;
+            height: 120px;
+        }
+
+        /* Pixel dog via SVG. We’ll animate by toggling classes on the <svg> */
+        svg.dog {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        /* Common dog parts styles through classes */
+        .dog-body {
+            fill: #cfcfcf;
+        }
+
+        .dog-spot {
+            fill: #a3a3a3;
+        }
+
+        .dog-ear {
+            fill: #b3b3b3;
+        }
+
+        .dog-eye {
+            fill: #222;
+        }
+
+        .dog-mouth {
+            fill: #222;
+        }
+
+        .dog-tongue {
+            fill: #e06a6a;
+            opacity: 0;
+        }
+
+        .dog-tail {
+            fill: #cfcfcf;
+            transform-origin: 140px 52px;
+        }
+
+        .dog-leg {
+            fill: #cfcfcf;
+        }
+
+        .dog-zzz {
+            fill: #9fc3ff;
+            opacity: 0;
+        }
+
+        /* Wag animation */
+        .wag .dog-tail {
+            animation: wag 0.35s ease-in-out infinite;
+        }
+
+        @keyframes wag {
+            0% {
+                transform: rotate(8deg);
+            }
+
+            50% {
+                transform: rotate(-14deg);
+            }
+
+            100% {
+                transform: rotate(8deg);
+            }
+        }
+
+        /* Bark state */
+        .bark .dog-tongue {
+            opacity: 1;
+        }
+
+        .bark .dog-mouth {
+            transform: translateY(-2px);
+        }
+
+        /* Sleep state */
+        .sleep .dog-eye {
+            opacity: 0.1;
+        }
+
+        .sleep .dog-zzz {
+            opacity: 1;
+        }
+
+        .sleep .dog-tail {
+            animation: none;
+        }
+
+        /* Sit state: front legs close, rear down */
+        .sit .leg-front {
+            transform: translateY(2px);
+        }
+
+        .sit .leg-back {
+            transform: translateY(6px);
+        }
+
+        /* Walk state: dog moves slightly left-right */
+        .walk {
+            animation: dog-walk 1.8s ease-in-out infinite;
+        }
+
+        @keyframes dog-walk {
+            0% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            50% {
+                transform: translateX(-46%) translateY(1px);
+            }
+
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        /* Fetch state: lean forward */
+        .fetch .dog-tail {
+            animation: wag 0.25s ease-in-out infinite;
+        }
+
+        .fetch .leg-front {
+            transform: translateY(3px);
+        }
+
+        .fetch .dog-mouth {
+            transform: translateY(-1px);
+        }
+
+        /* Sniff state: nose down */
+        .sniff .dog-mouth {
+            transform: translateY(2px);
+        }
+
+        .sniff .dog-ear {
+            opacity: 0.95;
+        }
+
+        /* Toast messages */
+        .toast {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <h1>Pixel Dog – Web Pet</h1>
+        <div class="toolbar">
+            <button id="btnPet">Pet</button>
+            <button id="btnFeed">Feed</button>
+            <button id="btnTrick">Ask for trick</button>
+            <button id="btnNap">Nap</button>
+            <button id="btnWake">Wake</button>
+        </div>
+        <div class="status" id="status">Status: Idle and curious.</div>
+
+        <div class="room" id="room">
+            <div class="rug"></div>
+            <div class="plant" id="plant" title="Plant (click to sniff)"></div>
+            <div class="ball" id="ball" title="Ball (click to play)"></div>
+            <div class="bowl hidden" id="bowl" title="Food bowl"></div>
+
+            <div class="dog-wrap" id="dogWrap">
+                <!-- Pixel dog SVG -->
+                <svg class="dog" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg" aria-label="Pixel dog">
+                    <!-- Body -->
+                    <rect class="dog-body" x="40" y="40" width="90" height="40" rx="4" />
+                    <!-- Spot -->
+                    <rect class="dog-spot" x="70" y="46" width="20" height="12" rx="2" />
+                    <!-- Head -->
+                    <rect class="dog-body" x="120" y="34" width="40" height="34" rx="4" />
+                    <!-- Ear -->
+                    <rect class="dog-ear" x="132" y="24" width="12" height="14" rx="3" />
+                    <!-- Eye -->
+                    <rect class="dog-eye" x="140" y="44" width="6" height="6" rx="2" />
+                    <!-- Mouth/nose -->
+                    <rect class="dog-mouth" x="148" y="56" width="8" height="6" rx="2" />
+                    <rect class="dog-tongue" x="150" y="62" width="6" height="6" rx="2" />
+                    <!-- Tail -->
+                    <rect class="dog-tail" x="32" y="52" width="12" height="6" rx="2" />
+                    <!-- Legs -->
+                    <rect class="dog-leg leg-front" x="98" y="80" width="10" height="20" rx="2" />
+                    <rect class="dog-leg leg-front" x="112" y="80" width="10" height="20" rx="2" />
+                    <rect class="dog-leg leg-back" x="58" y="80" width="10" height="20" rx="2" />
+                    <rect class="dog-leg leg-back" x="72" y="80" width="10" height="20" rx="2" />
+                    <!-- Zzz -->
+                    <text class="dog-zzz" x="158" y="26" font-size="14">Z</text>
+                    <text class="dog-zzz" x="166" y="18" font-size="10">Z</text>
+                </svg>
+            </div>
+
+            <div class="toast" id="toast">Hello!</div>
+        </div>
+    </div>
+
+    <script>
+        const dogWrap = document.getElementById('dogWrap');
+        const statusEl = document.getElementById('status');
+        const toast = document.getElementById('toast');
+        const bowl = document.getElementById('bowl');
+        const ball = document.getElementById('ball');
+        const plant = document.getElementById('plant');
+
+        const btnPet = document.getElementById('btnPet');
+        const btnFeed = document.getElementById('btnFeed');
+        const btnTrick = document.getElementById('btnTrick');
+        const btnNap = document.getElementById('btnNap');
+        const btnWake = document.getElementById('btnWake');
+
+        let randomTimer = null;
+        let sleeping = false;
+
+        function setState(state, duration = 1500, label = "") {
+            dogWrap.className = `dog-wrap ${state}`;
+            if (label) statusEl.textContent = `Status: ${label}`;
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (!sleeping) {
+                        dogWrap.className = 'dog-wrap'; // back to idle
+                        statusEl.textContent = 'Status: Idle and curious.';
+                    }
+                }, duration);
+            }
+        }
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1200);
+        }
+
+        function randomAction() {
+            if (sleeping) return;
+            const actions = [
+                () => setState('walk', 1800, 'Walking around.'),
+                () => setState('sit wag', 1800, 'Sitting and wagging.'),
+                () => setState('sniff', 1400, 'Sniffing the air.'),
+                () => setState('bark', 1200, 'Barking softly.'),
+            ];
+            const pick = actions[Math.floor(Math.random() * actions.length)];
+            pick();
+            scheduleRandom();
+        }
+
+        function scheduleRandom() {
+            const ms = 2500 + Math.random() * 4500; // 2.5–7s
+            clearTimeout(randomTimer);
+            randomTimer = setTimeout(randomAction, ms);
+        }
+
+        // Interactions
+        btnPet.addEventListener('click', () => {
+            setState('wag', 1600, 'Enjoying pets.');
+            showToast('Wag wag!');
+        });
+
+        btnFeed.addEventListener('click', () => {
+            bowl.classList.remove('hidden');
+            setState('walk', 800, 'Heading to the bowl.');
+            setTimeout(() => {
+                setState('sit', 400, 'Sniffing food.');
+                setTimeout(() => {
+                    setState('bark', 800, 'Nom nom!');
+                    showToast('Yummy!');
+                    setTimeout(() => bowl.classList.add('hidden'), 600);
+                }, 500);
+            }, 700);
+        });
+
+        btnTrick.addEventListener('click', () => {
+            const tricks = [
+                () => setState('sit bark', 1300, 'Sit + bark trick.'),
+                () => setState('walk wag', 1600, 'Happy walk.'),
+                () => setState('fetch', 1600, 'Ready to fetch!'),
+            ];
+            const pick = tricks[Math.floor(Math.random() * tricks.length)];
+            pick();
+            showToast('Good dog!');
+        });
+
+        btnNap.addEventListener('click', () => {
+            sleeping = true;
+            setState('sleep', 0, 'Sleeping...');
+            showToast('Zzz...');
+            clearTimeout(randomTimer);
+        });
+
+        btnWake.addEventListener('click', () => {
+            sleeping = false;
+            setState('', 0, 'Awake and curious.');
+            showToast('Hello!');
+            scheduleRandom();
+        });
+
+        // Ball interaction – fetch
+        ball.addEventListener('click', () => {
+            ball.classList.remove('roll'); // reset animation
+            void ball.offsetWidth; // reflow to restart
+            ball.classList.add('roll');
+            setState('fetch', 1600, 'Fetching the ball!');
+            showToast('Go get it!');
+        });
+
+        // Plant interaction – sniff
+        plant.addEventListener('click', () => {
+            setState('sniff', 1400, 'Sniffing the plant.');
+            showToast('Sniff sniff!');
+        });
+
+        // Kick off random behavior
+        scheduleRandom();
+    </script>
+</body>
+
+</html>
